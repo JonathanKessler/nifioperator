@@ -1,0 +1,52 @@
+# NiFi Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nifi-parasite
+  namespace: default
+spec:
+  replicas: 1
+  serviceName: nifi-parasite
+  selector:
+    matchLabels:
+      app: nifi-parasite
+  template:
+    metadata:
+      labels:
+        app: nifi-parasite 
+    spec: 
+      containers:
+      - name: nifi-parasite-container
+        image: "nifi:5000/parasite/latest"
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: nifi-pv
+          mountPath: /share
+        - name: flow-volume
+          mountPath: /flow-xml
+        ports:
+        - containerPort: 8080
+          name: http-port
+        - containerPort: 8443
+          name: https-port
+        env:
+        - name: NIFI_VERSION
+          value: "1.10.0-SNAPSHOT"
+        - name: SHARE_DIR
+          value: "/share"
+      volumes:
+      - name: nifi-pv
+        persistentVolumeClaim:
+          claimName: nifi-pvc
+      - name: test-volume
+        hostPath:
+          # directory location on host
+          path: /stuff/local-path-provisioner/template
+          # this field is optional
+          type: Directory
+      - name: flow-volume
+        configMap:
+          name: flow-config-map
+          items:
+          - key: flow.xml
+            path: flow.xml

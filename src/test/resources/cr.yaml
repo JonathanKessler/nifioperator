@@ -1,0 +1,10 @@
+apiVersion: "test.com/v1alpha1"
+kind: NiFiCluster
+metadata:
+  name: my-nifi-cluster
+spec:
+  image: "busybox"
+  replicas: 2
+  repositoryHost: "https://nifi-repository:PORT"
+  flowId: "123456"
+  flowVersion: 1
