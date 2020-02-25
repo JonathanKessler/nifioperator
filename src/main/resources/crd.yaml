@@ -28,6 +28,8 @@ spec:
                   type: string
                 flowId:
                   type: string
+                bucketId:
+                  type: string
                 flowVersion:
                   type: integer
   # either Namespaced or Cluster

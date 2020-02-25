@@ -13,6 +13,7 @@ public class NiFiClusterSpec implements KubernetesResource {
     private int replicas;
     private String image;
     private String flowId;
+    private String bucketId;
     private String flowVersion;
     private String repositoryHost;
 
@@ -65,5 +66,13 @@ public class NiFiClusterSpec implements KubernetesResource {
                 ", flowVersion='" + flowVersion + '\'' +
                 ", repositoryHost='" + repositoryHost + '\'' +
                 '}';
+    }
+
+    public String getBucketId() {
+        return bucketId;
+    }
+
+    public void setBucketId(String bucketId) {
+        this.bucketId = bucketId;
     }
 }

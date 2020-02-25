@@ -8,6 +8,7 @@ ENV JAVA_HOME /etc/alternatives/jre
 
 ADD run.sh /run.sh
 ADD nifi-1.10.0-SNAPSHOT-bin.tar.gz /nifi-1.10.0-SNAPSHOT-bin
+ADD nifi-toolkit-1.11.2-bin.tar.gz /
 
 RUN chmod +x run.sh
 

@@ -16,6 +16,8 @@ import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetSpec;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetSpecBuilder;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetStatus;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
@@ -28,6 +30,8 @@ import test.com.crd.DoneableNiFiCluster;
 import test.com.crd.NiFiCluster;
 import test.com.crd.NiFiClusters;
 
+import javax.xml.bind.DatatypeConverter;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
@@ -81,7 +85,7 @@ public class NiFiClusterController {
     private void reconcilePersistentVolumeClaim(NiFiCluster niFiCluster) {
         LOGGER.info("createPersistentVolumeClaim");
 
-        String name = niFiCluster.getMetadata().getName().concat("-pvc");
+        String name = niFiCluster.getMetadata().getName();
         String namespace = niFiCluster.getMetadata().getNamespace();
 
         if(kubernetesClient.persistentVolumeClaims().inNamespace(namespace).withName(name).get() == null) {
@@ -116,7 +120,7 @@ public class NiFiClusterController {
      * @param niFiCluster The NiFiCluster that was just created or edited
      */
     private void reconcileConfigMap(NiFiCluster niFiCluster) {
-        String name = niFiCluster.getMetadata().getName() + "-flow-map";
+        String name = niFiCluster.getMetadata().getName();
         String namespace = niFiCluster.getMetadata().getNamespace();
 
         ConfigMap configMap = kubernetesClient.configMaps().inNamespace(namespace).withName(name).get();
@@ -146,63 +150,16 @@ public class NiFiClusterController {
                 "<flowController encoding-version=\"1.4\">\n" +
                 "  <maxTimerDrivenThreadCount>10</maxTimerDrivenThreadCount>\n" +
                 "  <maxEventDrivenThreadCount>1</maxEventDrivenThreadCount>\n" +
-                "  <registries/>\n" +
                 "  <parameterContexts/>\n" +
                 "  <rootGroup>\n" +
-                "    <id>30b87aef-0170-1000-81c5-96ae691312e9</id>\n" +
+                "    <id>" + UUID.randomUUID().toString() + "</id>\n" +
                 "    <name>NiFi Flow</name>\n" +
                 "    <position x=\"0.0\" y=\"0.0\"/>\n" +
                 "    <comment/>\n" +
-                "    <processor>\n" +
-                "      <id>30b9602c-0170-1000-5d59-cedacbc7d9df</id>\n" +
-                "      <name>GenerateFlowFile</name>\n" +
-                "      <position x=\"523.0\" y=\"125.0\"/>\n" +
-                "      <styles/>\n" +
-                "      <comment/>\n" +
-                "      <class>org.apache.nifi.processors.standard.GenerateFlowFile</class>\n" +
-                "      <bundle>\n" +
-                "        <group>org.apache.nifi</group>\n" +
-                "        <artifact>nifi-standard-nar</artifact>\n" +
-                "        <version>1.10.0-SNAPSHOT</version>\n" +
-                "      </bundle>\n" +
-                "      <maxConcurrentTasks>1</maxConcurrentTasks>\n" +
-                "      <schedulingPeriod>0 sec</schedulingPeriod>\n" +
-                "      <penalizationPeriod>30 sec</penalizationPeriod>\n" +
-                "      <yieldPeriod>1 sec</yieldPeriod>\n" +
-                "      <bulletinLevel>WARN</bulletinLevel>\n" +
-                "      <lossTolerant>false</lossTolerant>\n" +
-                "      <scheduledState>STOPPED</scheduledState>\n" +
-                "      <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>\n" +
-                "      <executionNode>ALL</executionNode>\n" +
-                "      <runDurationNanos>0</runDurationNanos>\n" +
-                "      <property>\n" +
-                "        <name>File Size</name>\n" +
-                "        <value>0B</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>Batch Size</name>\n" +
-                "        <value>1</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>Data Format</name>\n" +
-                "        <value>Text</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>Unique FlowFiles</name>\n" +
-                "        <value>false</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>generate-ff-custom-text</name>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>character-set</name>\n" +
-                "        <value>UTF-8</value>\n" +
-                "      </property>\n" +
-                "    </processor>\n" +
                 "  </rootGroup>\n" +
                 "  <controllerServices/>\n" +
                 "  <reportingTasks/>\n" +
-                "</flowController>";
+                "</flowController>\n";
     }
 
     /**
@@ -217,12 +174,8 @@ public class NiFiClusterController {
         String namespace = niFiCluster.getMetadata().getNamespace();
 
         StatefulSet existingSet = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).get();
-
-        // TODO Ensure this will be null if the statefulset object doesn't exist in k8s
-        if(existingSet == null) {
-            LOGGER.info("Statefulset is null, creating");
             ConfigMapVolumeSource configMapVolumeSource = new ConfigMapVolumeSourceBuilder()
-                    .withName(name + "-flow-map")
+                    .withName(name)
                     .addNewItem().withKey("flow.xml").withNewPath("flow.xml").endItem()
                     .build();
 
@@ -230,26 +183,36 @@ public class NiFiClusterController {
                     .addNewContainer()
                     .withNewName(name.concat("-container"))
                     .withImage(niFiCluster.getSpec().getImage()).withNewImagePullPolicy("Always")
-                    .addNewVolumeMount().withName(name + "-pv").withMountPath("/share").endVolumeMount()
+                    .addNewVolumeMount().withName(name).withMountPath("/share").endVolumeMount()
                     .addNewVolumeMount().withName(name + "-flow-volume").withMountPath("/flow-xml").endVolumeMount()
                     .addNewPort().withName("http-port").withContainerPort(8080).endPort()
                     .addNewPort().withName("https-port").withContainerPort(8443).endPort()
                     .addNewEnv().withName("NIFI_VERSION").withValue("1.10.0-SNAPSHOT").endEnv()
                     .addNewEnv().withName("SHARE_DIR").withValue("/share").endEnv()
+                    .addNewEnv().withName("REPOSITORY_URL").withValue(niFiCluster.getSpec().getRepositoryHost()).endEnv()
+                    .addNewEnv().withName("FLOW_ID").withValue(niFiCluster.getSpec().getFlowId()).endEnv()
+                    .addNewEnv().withName("BUCKET_ID").withValue(niFiCluster.getSpec().getBucketId()).endEnv()
+                    .addNewEnv().withName("FLOW_VERSION").withValue(niFiCluster.getSpec().getFlowVersion()).endEnv()
+                    .withNewReadinessProbe().withNewExec().addNewCommand("cat /tmp/ready").endExec().withInitialDelaySeconds(20).withPeriodSeconds(1).endReadinessProbe()
                     .endContainer()
-                    .addNewVolume().withName(name.concat("-pv")).withNewPersistentVolumeClaim().withClaimName(name.concat("-pvc")).endPersistentVolumeClaim().endVolume()
+                    .addNewVolume().withName(name).withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim().endVolume()
                     .addNewVolume().withName(name + "-flow-volume").withConfigMap(configMapVolumeSource).endVolume()
                     .build();
 
+            String flowKey = niFiCluster.getSpec().getFlowId() + "-" + niFiCluster.getSpec().getFlowVersion();
+
             PodTemplateSpec podTemplateSpec = new PodTemplateSpecBuilder()
-                    .withNewMetadata().addToLabels("app", name).endMetadata()
+                    .withNewMetadata()
+                    .addToLabels("app", "nifi")
+                    .addToLabels("cluster", name)
+                    .addToLabels("flow_key", flowKey).endMetadata()
                     .withSpec(podSpec)
                     .build();
 
             StatefulSetSpec statefulSetSpec = new StatefulSetSpecBuilder()
                     .withReplicas(niFiCluster.getSpec().getReplicas())
                     .withServiceName(name)
-                    .withNewSelector().addToMatchLabels("app", name).endSelector()
+                    .withNewSelector().addToMatchLabels("app", "nifi").addToMatchLabels("cluster", name).endSelector()
                     .withTemplate(podTemplateSpec)
                     .build();
 
@@ -260,9 +223,12 @@ public class NiFiClusterController {
                     .withSpec(statefulSetSpec)
                     .build();
 
-            kubernetesClient.apps().statefulSets().createOrReplace(statefulSet);
+        if(existingSet == null) {
+            LOGGER.info("Statefulset does not exist, creating");
+            kubernetesClient.apps().statefulSets().create(statefulSet);
         } else {
-            // UPDATE statefulset
+            LOGGER.info("Statefulset exists, updating");
+            kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).scale(niFiCluster.getSpec().getReplicas());
         }
     }
 
@@ -336,6 +302,23 @@ public class NiFiClusterController {
      * @param niFiCluster The CustomResource instance that was deleted
      */
     private void deleteNiFiCluster(NiFiCluster niFiCluster) {
+        String namespace = niFiCluster.getMetadata().getNamespace();
+        String name = niFiCluster.getMetadata().getName();
 
+        StatefulSet statefulSet = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).get();
+        if(statefulSet != null) {
+            kubernetesClient.apps().statefulSets().delete(statefulSet);
+        }
+
+        ConfigMap configMap = kubernetesClient.configMaps().inNamespace(namespace).withName(name).get();
+        if(configMap != null) {
+            kubernetesClient.configMaps().delete(configMap);
+        }
+
+        PersistentVolumeClaim persistentVolumeClaim = kubernetesClient.persistentVolumeClaims().inNamespace(namespace).withName(name).get();
+
+        if(persistentVolumeClaim != null) {
+            kubernetesClient.persistentVolumeClaims().delete(persistentVolumeClaim);
+        }
     }
 }
