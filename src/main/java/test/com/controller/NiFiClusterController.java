@@ -2,24 +2,11 @@ package test.com.controller;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.api.model.ConfigMapVolumeSource;
-import io.fabric8.kubernetes.api.model.ConfigMapVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodSpecBuilder;
-import io.fabric8.kubernetes.api.model.PodTemplateSpec;
-import io.fabric8.kubernetes.api.model.PodTemplateSpecBuilder;
-import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetSpec;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetSpecBuilder;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetStatus;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
@@ -28,23 +15,18 @@ import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.informers.cache.Cache;
 import io.fabric8.kubernetes.client.informers.cache.Lister;
 import io.fabric8.zjsonpatch.internal.guava.Strings;
-import jdk.jfr.internal.LogLevel;
 import test.com.crd.DoneableNiFiCluster;
 import test.com.crd.NiFiCluster;
 import test.com.crd.NiFiClusters;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
@@ -78,7 +60,7 @@ public class NiFiClusterController {
 
             @Override
             public void onUpdate(NiFiCluster niFiCluster, NiFiCluster newNiFiCluster) {
-                LOGGER.log(Level.INFO, "NiFiCluster object updated: " + niFiCluster);
+                LOGGER.log(Level.INFO, "NiFiCluster object updated. Old: " + niFiCluster +"\nNew: " + newNiFiCluster);
                 enqueueNiFiCluster(newNiFiCluster);
             }
 
@@ -125,7 +107,7 @@ public class NiFiClusterController {
      *
      * @param niFiCluster The NiFiCluster that was just created or edited
      */
-    private void reconcileConfigMap(NiFiCluster niFiCluster) {
+    private void reconcileConfigMap(NiFiCluster niFiCluster) throws IOException, URISyntaxException {
         String name = niFiCluster.getMetadata().getName();
         String namespace = niFiCluster.getMetadata().getNamespace();
 
@@ -150,60 +132,10 @@ public class NiFiClusterController {
      *
      * @return The flow segment
      */
-    private String retrieveFlowXml() {
-        // Hardcoded string for test purposes
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-                "<flowController encoding-version=\"1.4\">\n" +
-                "  <maxTimerDrivenThreadCount>10</maxTimerDrivenThreadCount>\n" +
-                "  <maxEventDrivenThreadCount>1</maxEventDrivenThreadCount>\n" +
-                "  <parameterContexts/>\n" +
-                "  <rootGroup>\n" +
-                "    <id>" + UUID.randomUUID().toString() + "</id>\n" +
-                "    <name>NiFi Flow</name>\n" +
-                "    <position x=\"0.0\" y=\"0.0\"/>\n" +
-                "    <comment/>\n" +
-                "  </rootGroup>\n" +
-                "  <controllerServices/>\n" +
-                "  <reportingTasks>\n" +
-                "    <reportingTask>\n" +
-                "      <id>87471357-0170-1000-c0e4-613e49f7bde6</id>\n" +
-                "      <name>PrometheusReportingTask</name>\n" +
-                "      <comment/>\n" +
-                "      <class>org.apache.nifi.reporting.prometheus.PrometheusReportingTask</class>\n" +
-                "      <bundle>\n" +
-                "        <group>org.apache.nifi</group>\n" +
-                "        <artifact>nifi-prometheus-nar</artifact>\n" +
-                "        <version>1.10.0-SNAPSHOT</version>\n" +
-                "      </bundle>\n" +
-                "      <schedulingPeriod>60 sec</schedulingPeriod>\n" +
-                "      <scheduledState>RUNNING</scheduledState>\n" +
-                "      <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-metrics-endpoint-port</name>\n" +
-                "        <value>9092</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-instance-id</name>\n" +
-                "        <value>${hostname(true)}</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-metrics-strategy</name>\n" +
-                "        <value>All Components</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-metrics-send-jvm</name>\n" +
-                "        <value>false</value>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-ssl-context</name>\n" +
-                "      </property>\n" +
-                "      <property>\n" +
-                "        <name>prometheus-reporting-task-client-auth</name>\n" +
-                "        <value>No Authentication</value>\n" +
-                "      </property>\n" +
-                "    </reportingTask>\n" +
-                "  </reportingTasks>\n" +
-                "</flowController>\n";
+    private String retrieveFlowXml() throws URISyntaxException, IOException {
+        String flowXml = Files.readString(Path.of(NiFiClusterController.class.getClassLoader().getResource("flow.xml").toURI()));
+
+        return flowXml;
     }
 
     /**
@@ -217,12 +149,12 @@ public class NiFiClusterController {
         String name = niFiCluster.getMetadata().getName();
         String namespace = niFiCluster.getMetadata().getNamespace();
 
-        StatefulSet existingSet = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).get();
+        StatefulSet statefulSet = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).get();
 
-        if(existingSet == null) {
+        if(statefulSet == null) {
             String yaml = Files.readString(Paths.get(getClass().getClassLoader().getResource("ss.yaml").toURI()));
 
-            if(yaml.isEmpty()) {
+            if (yaml.isEmpty()) {
                 throw new Exception("Unable to retrieve yaml from resource file: ss.yaml");
             }
 
@@ -231,20 +163,25 @@ public class NiFiClusterController {
             // Update statefulset with niFiCluster-specific info
             yaml = yaml.replaceAll("NAMESPACE", namespace).replaceAll("NAME", name);
 
-            StatefulSet newStatefulSet = kubernetesClient.apps().statefulSets().load(new ByteArrayInputStream(yaml.getBytes())).get();
-            List<EnvVar> envVarList = new ArrayList<>();
-            envVarList.add(new EnvVarBuilder().withName("NIFI_VERSION").withValue("1.10.0-SNAPSHOT").build());
-            envVarList.add(new EnvVarBuilder().withName("SHARE_DIR").withValue("/share").build());
-            envVarList.add(new EnvVarBuilder().withName("REPOSITORY_URL").withValue(niFiCluster.getSpec().getRepositoryHost()).build());
-            envVarList.add(new EnvVarBuilder().withName("FLOW_ID").withValue(niFiCluster.getSpec().getFlowId()).build());
-            envVarList.add(new EnvVarBuilder().withName("BUCKET_ID").withValue(niFiCluster.getSpec().getBucketId()).build());
-            envVarList.add(new EnvVarBuilder().withName("FLOW_VERSION").withValue(niFiCluster.getSpec().getFlowVersion()).build());
-            newStatefulSet.getSpec().getTemplate().getSpec().getContainers().get(0).setEnv(envVarList);
+            statefulSet = kubernetesClient.apps().statefulSets().load(new ByteArrayInputStream(yaml.getBytes())).get();
+        }
 
+        // Will this update stuff on an existing SS?
+        List<EnvVar> envVarList = new ArrayList<>();
+        envVarList.add(new EnvVarBuilder().withName("NIFI_VERSION").withValue("1.10.0-SNAPSHOT").build());
+        envVarList.add(new EnvVarBuilder().withName("SHARE_DIR").withValue("/share").build());
+        envVarList.add(new EnvVarBuilder().withName("REPOSITORY_URL").withValue(niFiCluster.getSpec().getRepositoryHost()).build());
+        envVarList.add(new EnvVarBuilder().withName("FLOW_ID").withValue(niFiCluster.getSpec().getFlowId()).build());
+        envVarList.add(new EnvVarBuilder().withName("BUCKET_ID").withValue(niFiCluster.getSpec().getBucketId()).build());
+        envVarList.add(new EnvVarBuilder().withName("FLOW_VERSION").withValue(niFiCluster.getSpec().getFlowVersion()).build());
+        statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0).setEnv(envVarList);
+
+        if(false) {
             LOGGER.info("Statefulset does not exist, creating");
-            kubernetesClient.apps().statefulSets().create(newStatefulSet);
+            kubernetesClient.apps().statefulSets().create(statefulSet);
         } else {
             LOGGER.info("Statefulset exists, updating");
+            kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).patch(statefulSet);
             kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).scale(niFiCluster.getSpec().getReplicas());
         }
     }

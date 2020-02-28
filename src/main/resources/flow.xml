@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<flowController encoding-version="1.4">
+    <maxTimerDrivenThreadCount>10</maxTimerDrivenThreadCount>
+    <maxEventDrivenThreadCount>1</maxEventDrivenThreadCount>
+    <parameterContexts/>
+    <rootGroup>
+        <id>8fbb13d6-b409-47aa-b015-4cb8da66d098</id>
+        <name>NiFi Flow</name>
+        <position x="0.0" y="0.0"/>
+        <comment/>
+    </rootGroup>
+    <controllerServices/>
+    <reportingTasks>
+        <reportingTask>
+            <id>87471357-0170-1000-c0e4-613e49f7bde6</id>
+            <name>PrometheusReportingTask</name>
+            <comment/>
+            <class>org.apache.nifi.reporting.prometheus.PrometheusReportingTask</class>
+            <bundle>
+                <group>org.apache.nifi</group>
+                <artifact>nifi-prometheus-nar</artifact>
+                <version>1.10.0-SNAPSHOT</version>
+            </bundle>
+            <schedulingPeriod>60 sec</schedulingPeriod>
+            <scheduledState>RUNNING</scheduledState>
+            <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+            <property>
+                <name>prometheus-reporting-task-metrics-endpoint-port</name>
+                <value>9092</value>
+            </property>
+            <property>
+                <name>prometheus-reporting-task-instance-id</name>
+                <value>${hostname(true)}</value>
+            </property>
+            <property>
+                <name>prometheus-reporting-task-metrics-strategy</name>
+                <value>All Components</value>
+            </property>
+            <property>
+                <name>prometheus-reporting-task-metrics-send-jvm</name>
+                <value>false</value>
+            </property>
+            <property>
+                <name>prometheus-reporting-task-ssl-context</name>
+            </property>
+            <property>
+                <name>prometheus-reporting-task-client-auth</name>
+                <value>No Authentication</value>
+            </property>
+        </reportingTask>
+    </reportingTasks>
+</flowController>
