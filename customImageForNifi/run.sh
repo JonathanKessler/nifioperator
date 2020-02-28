@@ -45,11 +45,11 @@ until $TOOLKIT_BIN nifi cluster-summary -u $NIFI_URL >& /dev/null  || [ $COUNTER
 done
 
 echo "Attempting to register the NiFi registry at $REPOSITORY_URL"
-REG_ID=$($TOOLKIT_BIN nifi create-reg-client -u $NIFI_URL -rcn test -rcu $REPOSITORY_URL) || {echo "Failed to register the NiFi Registry with error message: $REG_ID"; exit 1;}
+REG_ID=$($TOOLKIT_BIN nifi create-reg-client -u $NIFI_URL -rcn test -rcu $REPOSITORY_URL) || { echo "Failed to register the NiFi Registry with error message: $REG_ID"; }
 echo "Attempting to import a process group from Bucket $BUCKET_ID, Flow $FLOW_ID, Version $FLOW_VERSION"
-PG_ID=$($TOOLKIT_BIN nifi pg-import -b $BUCKET_ID -f $FLOW_ID -fv $FLOW_VERSION -u $NIFI_URL -rcid $REG_ID) || {echo "Failed to import process group with error message: $PG_ID"; exit 1;}
+PG_ID=$($TOOLKIT_BIN nifi pg-import -b $BUCKET_ID -f $FLOW_ID -fv $FLOW_VERSION -u $NIFI_URL -rcid $REG_ID) || { echo "Failed to import process group with error message: $PG_ID"; }
 echo "Attempting to start newly imported process group $PG_ID"
-$TOOLKIT_BIN nifi pg-start -pgid $PG_ID -u $NIFI_URL || {echo "Failed to start newly imported process group."; exit 1;}
+$TOOLKIT_BIN nifi pg-start -pgid $PG_ID -u $NIFI_URL || { echo "Failed to start newly imported process group."; }
 
 # Use the existence of this file for a readiness probe
 touch /tmp/ready

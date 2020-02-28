@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: NAME
+  namespace: NAMESPACE
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nifi
+      cluster: NAME
+  serviceName: NAME
+  template:
+    metadata:
+      labels:
+        app: nifi
+        cluster: NAME
+    spec:
+      containers:
+      - env:
+        image: nifi:5000/parasite/latest
+        imagePullPolicy: Always
+        name: NAME-container
+        ports:
+        - containerPort: 8080
+          name: http-port
+          protocol: TCP
+        - containerPort: 8443
+          name: https-port
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/ready
+          failureThreshold: 3
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /share
+          name: NAME
+        - mountPath: /flow-xml
+          name: NAME-flow-volume
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - name: NAME
+        persistentVolumeClaim:
+          claimName: NAME
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: flow.xml
+            path: flow.xml
+          name: NAME
+        name: NAME-flow-volume
