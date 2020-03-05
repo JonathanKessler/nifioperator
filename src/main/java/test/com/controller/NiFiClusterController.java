@@ -6,6 +6,7 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
@@ -133,9 +134,33 @@ public class NiFiClusterController {
      * @return The flow segment
      */
     private String retrieveFlowXml() throws URISyntaxException, IOException {
-        String flowXml = Files.readString(Path.of(NiFiClusterController.class.getClassLoader().getResource("flow.xml").toURI()));
+        String flowXml = Files.readString(Path.of(getClass().getClassLoader().getResource("flow.xml").toURI()));
 
         return flowXml;
+    }
+
+    private void reconcileService(NiFiCluster niFiCluster) throws Exception {
+        LOGGER.info("reconcileService");
+        String name = niFiCluster.getMetadata().getName();
+        String namespace = niFiCluster.getMetadata().getNamespace();
+
+        Service service = kubernetesClient.services().inNamespace(namespace).withName(name).get();
+
+        if(service == null) {
+            String yaml = Files.readString(Paths.get(getClass().getClassLoader().getResource("service.yaml").toURI()));
+
+            if (yaml.isEmpty()) {
+                throw new Exception("Unable to retrieve yaml from resource file: ss.yaml");
+            }
+
+            LOGGER.info("Read the following YAML into memory: \n" + yaml);
+
+            // Update statefulset with niFiCluster-specific info
+            yaml = yaml.replaceAll("NAMESPACE", namespace).replaceAll("NAME", name);
+
+            service = kubernetesClient.services().load(new ByteArrayInputStream(yaml.getBytes())).get();
+            kubernetesClient.services().createOrReplace(service);
+        }
     }
 
     /**
@@ -150,8 +175,9 @@ public class NiFiClusterController {
         String namespace = niFiCluster.getMetadata().getNamespace();
 
         StatefulSet statefulSet = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(name).get();
+        boolean exists = statefulSet != null;
 
-        if(statefulSet == null) {
+        if(!exists) {
             String yaml = Files.readString(Paths.get(getClass().getClassLoader().getResource("ss.yaml").toURI()));
 
             if (yaml.isEmpty()) {
@@ -176,7 +202,7 @@ public class NiFiClusterController {
         envVarList.add(new EnvVarBuilder().withName("FLOW_VERSION").withValue(niFiCluster.getSpec().getFlowVersion()).build());
         statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0).setEnv(envVarList);
 
-        if(false) {
+        if(!exists) {
             LOGGER.info("Statefulset does not exist, creating");
             kubernetesClient.apps().statefulSets().create(statefulSet);
         } else {
@@ -235,6 +261,7 @@ public class NiFiClusterController {
             reconcilePersistentVolumeClaim(niFiCluster);
             reconcileConfigMap(niFiCluster);
             reconcileStatefulSet(niFiCluster);
+            reconcileService(niFiCluster);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Exception", e);
         }
@@ -273,6 +300,11 @@ public class NiFiClusterController {
 
         if(persistentVolumeClaim != null) {
             kubernetesClient.persistentVolumeClaims().delete(persistentVolumeClaim);
+        }
+
+        Service service = kubernetesClient.services().inNamespace(namespace).withName(name).get();
+        if(service != null) {
+            kubernetesClient.services().delete(service);
         }
     }
 }

@@ -28,6 +28,12 @@ spec:
         - containerPort: 8443
           name: https-port
           protocol: TCP
+        - containerPort: 9090
+          name: prometheus-port
+          protocol: TCP
+        - containerPort: 9000
+          name: input-port
+          protocol: TCP
         readinessProbe:
           exec:
             command:
