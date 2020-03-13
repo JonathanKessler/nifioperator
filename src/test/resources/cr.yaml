@@ -3,9 +3,11 @@ kind: NiFiCluster
 metadata:
   name: my-nifi-cluster
 spec:
-  image: "nifi:5000/parasite/latest"
+  image: "<hostname>:5000/nifi/latest"
   replicas: 1 
   repositoryHost: "http://nifi-registry-service:18080"
-  flowId: "19c2a647-925d-4126-a4df-0537ecc5b980"
-  bucketId: "f5c87884-8878-4086-8e51-8e29b4f54025"
-  flowVersion: 2
+  flowId: "FLOW ID"
+  bucketId: "BUCKET ID"
+  flowVersion: 1
+  nifiVersion: "nifi-1.10.0-SNAPSHOT"
+  toolkitVersion: "nifi-toolkit-1.11.2"

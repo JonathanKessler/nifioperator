@@ -16,6 +16,8 @@ public class NiFiClusterSpec implements KubernetesResource {
     private String bucketId;
     private String flowVersion;
     private String repositoryHost;
+    private String nifiVersion;
+    private String toolkitVersion;
 
     public int getReplicas() {
         return replicas;
@@ -57,14 +59,33 @@ public class NiFiClusterSpec implements KubernetesResource {
         this.image = image;
     }
 
+    public String getNifiVersion() {
+        return nifiVersion;
+    }
+
+    public void setNifiVersion(String nifiVersion) {
+        this.nifiVersion = nifiVersion;
+    }
+
+    public String getToolkitVersion() {
+        return toolkitVersion;
+    }
+
+    public void setToolkitVersion(String toolkitVersion) {
+        this.toolkitVersion = toolkitVersion;
+    }
+
     @Override
     public String toString() {
         return "NiFiClusterSpec{" +
                 "replicas=" + replicas +
                 ", image='" + image + '\'' +
                 ", flowId='" + flowId + '\'' +
+                ", bucketId='" + bucketId + '\'' +
                 ", flowVersion='" + flowVersion + '\'' +
                 ", repositoryHost='" + repositoryHost + '\'' +
+                ", nifiVersion='" + nifiVersion + '\'' +
+                ", toolkitVersion='" + toolkitVersion + '\'' +
                 '}';
     }
 

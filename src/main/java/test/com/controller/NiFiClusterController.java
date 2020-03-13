@@ -187,14 +187,15 @@ public class NiFiClusterController {
             LOGGER.info("Read the following YAML into memory: \n" + yaml);
 
             // Update statefulset with niFiCluster-specific info
-            yaml = yaml.replaceAll("NAMESPACE", namespace).replaceAll("NAME", name);
+            yaml = yaml.replaceAll("NAMESPACE", namespace).replaceAll("NAME", name).replaceAll("IMAGE", niFiCluster.getSpec().getImage());
 
             statefulSet = kubernetesClient.apps().statefulSets().load(new ByteArrayInputStream(yaml.getBytes())).get();
         }
 
         // Will this update stuff on an existing SS?
         List<EnvVar> envVarList = new ArrayList<>();
-        envVarList.add(new EnvVarBuilder().withName("NIFI_VERSION").withValue("1.10.0-SNAPSHOT").build());
+        envVarList.add(new EnvVarBuilder().withName("NIFI_VERSION").withValue(niFiCluster.getSpec().getNifiVersion()).build());
+        envVarList.add(new EnvVarBuilder().withName("TOOLKIT_VERSION").withValue(niFiCluster.getSpec().getToolkitVersion()).build());
         envVarList.add(new EnvVarBuilder().withName("SHARE_DIR").withValue("/share").build());
         envVarList.add(new EnvVarBuilder().withName("REPOSITORY_URL").withValue(niFiCluster.getSpec().getRepositoryHost()).build());
         envVarList.add(new EnvVarBuilder().withName("FLOW_ID").withValue(niFiCluster.getSpec().getFlowId()).build());

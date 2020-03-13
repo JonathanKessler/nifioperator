@@ -32,6 +32,10 @@ spec:
                   type: string
                 flowVersion:
                   type: integer
+                nifiVersion:
+                  type: string
+                toolkitVersion:
+                  type: string
   # either Namespaced or Cluster
   scope: Namespaced
   names:

@@ -9,13 +9,17 @@ and access the Kubernetes cluster.
 
 ## Prerequisites
 
-Before running this operator, you must first create the Custom Resource Definiton:
+1) Deploy a private docker registry with custom image (see docker-registry README)
+
+2) Deploy a privite nifi registry and control some flow(s) (see nifi-registry README)
+
+3) Create the Custom Resource Definiton:
 
 `kubectl create -f src/main/resources/crd.yaml`
 
-An example instance of that custom resource can be found the test resources directory:
+4) Create the following directory on your k8s host (this is for demo purposes which use the host's local disk for some shared storage):
 
-`kubectl create -f src/test/resources/cr.yaml`
+/opt/tarballs
 
 ## To Run:
 
@@ -27,3 +31,7 @@ file. If it's not in the default spot of...whatever that is... set your ENV vari
 At the root of this project:
 
 `mvn clean install -DskipTests exec:java -Dexec.mainClass=test.com.NiFiClusterOperatorMain`
+
+Create a custom resource object. An example:
+
+`kubectl create -f src/test/resources/cr.yaml`
