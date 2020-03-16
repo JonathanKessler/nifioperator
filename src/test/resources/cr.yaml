@@ -3,7 +3,7 @@ kind: NiFiCluster
 metadata:
   name: my-nifi-cluster
 spec:
-  image: "<hostname>:5000/nifi/latest"
+  image: "<hostname>:5000/nifi:latest"
   replicas: 1 
   repositoryHost: "http://nifi-registry-service:18080"
   flowId: "FLOW ID"

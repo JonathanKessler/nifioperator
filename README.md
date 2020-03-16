@@ -28,7 +28,7 @@ file. If it's not in the default spot of...whatever that is... set your ENV vari
 
 `KUBECONFIG=/path/to/kubeconfig.yaml`
 
-At the root of this project:
+At the root of this project, using a Java 11 JRE:
 
 `mvn clean install -DskipTests exec:java -Dexec.mainClass=test.com.NiFiClusterOperatorMain`
 
