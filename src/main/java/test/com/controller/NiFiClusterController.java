@@ -109,6 +109,7 @@ public class NiFiClusterController {
      * @param niFiCluster The NiFiCluster that was just created or edited
      */
     private void reconcileConfigMap(NiFiCluster niFiCluster) throws IOException, URISyntaxException {
+        LOGGER.info("reconcileConfigMap");
         String name = niFiCluster.getMetadata().getName();
         String namespace = niFiCluster.getMetadata().getNamespace();
 
@@ -117,6 +118,7 @@ public class NiFiClusterController {
         String flowXml = retrieveFlowXml();
 
         if(configMap == null) {
+            LOGGER.info("ConfigMap does not exist, creating");
             configMap = new ConfigMapBuilder()
                     .withNewMetadata().withName(name).withNamespace(namespace).endMetadata()
                     .addToData("flow.xml", flowXml)
@@ -124,6 +126,7 @@ public class NiFiClusterController {
 
             kubernetesClient.configMaps().createOrReplace(configMap);
         } else {
+            LOGGER.info("ConfigMap exists, updating");
             // UPDATE the configmap
         }
     }

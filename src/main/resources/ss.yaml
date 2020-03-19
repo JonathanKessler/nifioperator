@@ -47,11 +47,16 @@ spec:
         volumeMounts:
         - mountPath: /tarballs
           name: tarball-volume
+        - mountPath: /share
+          name: share-volume
         - mountPath: /flow-xml
           name: NAME-flow-volume
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       volumes:
+      - name: share-volume
+        hostPath:
+          path: /opt/share
       - name: tarball-volume
         hostPath:
           path: /opt/tarballs
